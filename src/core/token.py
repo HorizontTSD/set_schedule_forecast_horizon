@@ -110,6 +110,5 @@ class StaticTokenValidator:
         logger.info(f"Static token validated: {token[:10]}...")
         return token
 
-
 jwt_token_validator = JWTTokenValidator()
 static_token_validator = StaticTokenValidator()

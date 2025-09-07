@@ -1,9 +1,8 @@
 # src/server.py
 import multiprocessing
-
 import uvicorn
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Request, status
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
@@ -12,34 +11,28 @@ from fastapi.security import HTTPBearer
 from src.core.configuration.config import settings
 from src.core.logger import logger
 from src.api.api_routers import api_router
-from src.core.token import token_validator
 
+from src.core.exceptions import register_exception_handlers
 
 API_PREFIX = "/" + settings.SERVICE_NAME
 
-# Загрузка переменных окружения
 load_dotenv()
 
 logger.info("Starting microservice main forecast")
 
-# Настройка CORS
 origins = ["http://localhost", "http://77.37.136.11"] if settings.PUBLIC_OR_LOCAL == "LOCAL" else ["http://77.37.136.11"]
 
-# Определение количества воркеров
+
 workers = multiprocessing.cpu_count()
 logger.info(f"[WORKERS] Count workers = {workers}")
 
-# Инициализация системы безопасности
 security = HTTPBearer()
 
-
-# Создание FastAPI приложения
 docs_url = "/docs"
 app = FastAPI(
     docs_url=docs_url,
     openapi_url="/openapi.json",
-    root_path=API_PREFIX,
-    dependencies=[Depends(token_validator)] if settings.VERIFY_TOKEN else []
+    root_path=API_PREFIX
 )
 
 @app.exception_handler(RequestValidationError)
@@ -54,7 +47,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         },
     )
 
-# Добавление middleware для CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -63,9 +55,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Подключение роутеров API
-app.include_router(api_router, prefix="/api/v1")
+register_exception_handlers(app)
 
+app.include_router(api_router, prefix="/api/v1")
 
 @app.get("/")
 def read_root():

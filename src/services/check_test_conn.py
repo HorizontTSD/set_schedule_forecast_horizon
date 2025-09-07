@@ -1,32 +1,31 @@
-import asyncio
-from src.db_clients.clients import get_db_connection
-from src.db_clients.config import TablesConfig
+from logging import getLogger
+from sqlalchemy import select, func
+from sqlalchemy.exc import SQLAlchemyError
+from src.models.user_models import Tables
+from src.session import db_manager
 
-tables = TablesConfig()
+logger = getLogger(__name__)
+tables = Tables()
 
 async def check_tables_info():
-    def sync_check():
-        result = {}
-        try:
-            conn = get_db_connection()
-        except Exception as e:
-            raise ConnectionError(f"Failed to connect to DB: {e}")
+    result = {}
 
-        try:
-            cursor = conn.cursor()
-            for table_name in tables.__dict__.values():
-                try:
-                    cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
-                    count = cursor.fetchone()[0]
-                    result[table_name] = f"Connection OK, rows: {count}"
-                except Exception as e:
-                    result[table_name] = f"Error accessing table: {e}"
-        finally:
+    async with db_manager.get_db_session() as session:
+        for attr_name, table in tables.__dict__.items():
+            if attr_name.startswith("__"):
+                continue
             try:
-                conn.close()
-            except Exception:
-                pass
+                query = select(func.count()).select_from(table)
+                res = await session.execute(query)
+                count = res.scalar_one()
+                result[attr_name] = f"Connection OK, rows: {count}"
 
-        return result
+            except SQLAlchemyError as e:
+                logger.error(f"Ошибка при доступе к таблице {attr_name}: {e}")
+                result[attr_name] = f"Error accessing table: {e}"
 
-    return await asyncio.to_thread(sync_check)
+            except Exception as e:
+                logger.error(f"Внутренняя ошибка при таблице {attr_name}: {e}")
+                result[attr_name] = f"Internal error: {e}"
+
+    return result

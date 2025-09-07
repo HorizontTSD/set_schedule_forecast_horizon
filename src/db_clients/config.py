@@ -1,4 +1,4 @@
-# src/core/config.py
+# src/db_clients/config.py
 from environs import Env
 
 
@@ -36,6 +36,9 @@ class DBConfig:
 
     def url(self):
         return f"postgresql://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
+    
+    def get_async_url(self):
+        return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"
 
 
 class TablesConfig:
@@ -51,6 +54,12 @@ class TablesConfig:
         self.ROLE_PERMISSIONS = "role_permissions"
         self.USER_ROLES = "user_roles"
 
+
+class RolesConfig:
+    def __init__(self):
+        self.SUPERUSER = "superuser"
+        self.ADMIN = "admin"
+        self.USER = "user"
 
 class DBSettings:
     def __init__(self):

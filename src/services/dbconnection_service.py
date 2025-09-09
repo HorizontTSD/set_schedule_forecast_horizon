@@ -5,7 +5,7 @@ from sqlalchemy import select, insert, update
 from src.core.security.password import hash_password
 
 from src.schemas import (
-CreateDBConnectionResponse, CreateDBConnectionRequest, DeleteDBConnectionRequest, DeleteDBConnectionResponse
+CreateDBConnectionResponse, CreateDBConnectionRequest, DeleteDBConnectionResponse
 )
 from src.models.organization_models import ConnectionSettings
 

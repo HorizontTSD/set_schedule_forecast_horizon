@@ -197,7 +197,7 @@ async def func_get_connection_tables(
 
 
 @router.get(
-    "/{connection_id}/columns/{table_name}",
+    "/{connection_id}/{table_name}/columns",
     response_model=ColumnsListResponse,
     summary="Получение списка колонок таблицы соединения"
 )

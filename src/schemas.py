@@ -1,7 +1,5 @@
-# src/schemas.py
-
 from pydantic import BaseModel
-
+from typing import List, Dict, Any
 
 class HellowRequest(BaseModel):
     names: list[str]
@@ -48,3 +46,36 @@ class TablesListResponse(BaseModel):
 
 class ColumnsListResponse(BaseModel):
     columns: list[str]
+
+
+class ForecastConfigRequest(BaseModel):
+    connection_id: int
+    data_name: str
+    source_table: str
+    time_column: str
+    target_column: str
+    count_time_points_predict: int
+    target_db: str
+    methods: list[str]
+
+
+class ForecastConfigResponse(BaseModel):
+    success: bool
+    message: str
+    sample_data: list[Any]
+
+
+class ScheduleForecastingResponse(BaseModel):
+    id: int
+    organization_id: int
+    connection_id: int
+    data_name: str
+
+
+class DeleteForecastResponse(BaseModel):
+    success: bool
+    message: str
+
+
+class ForecastMethodsResponse(BaseModel):
+    methods: List[str]

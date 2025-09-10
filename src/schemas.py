@@ -30,3 +30,21 @@ class DeleteDBConnectionRequest(BaseModel):
 class DeleteDBConnectionResponse(BaseModel):
     success: bool
     message: str
+
+
+class DBConnectionResponse(BaseModel):
+    id: int
+    db_name: str
+    connection_name: str | None
+
+
+class DBConnectionListResponse(BaseModel):
+    connections: list[DBConnectionResponse]
+
+
+class TablesListResponse(BaseModel):
+    tables: list[str]
+
+
+class ColumnsListResponse(BaseModel):
+    columns: list[str]

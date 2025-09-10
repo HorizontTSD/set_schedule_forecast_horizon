@@ -22,6 +22,8 @@ class Settings:
         self.JWT_ALGORITHM = env.str("JWT_ALGORITHM", "HS256")
         self.ACCESS_TOKEN_EXPIRE_MINUTES = env.int("ACCESS_TOKEN_EXPIRE_MINUTES", 15)
         self.REFRESH_TOKEN_EXPIRE_DAYS = env.int("REFRESH_TOKEN_EXPIRE_DAYS", 30)
+        self.CRYPTOGRAPHY_KEY = env.str("CRYPTOGRAPHY_KEY", None)
+
 
     def get_origins_urls(self):
         if self.PUBLIC_OR_LOCAL == 'PUBLIC':

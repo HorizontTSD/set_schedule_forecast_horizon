@@ -1,7 +1,8 @@
 # src/models/user_model.py
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Table, Text, func
+from sqlalchemy import (
+    Boolean, Column, DateTime, ForeignKey, Integer, String, Table, Text, JSON, TIMESTAMP, CheckConstraint, func)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db_clients.config import db_settings
@@ -108,6 +109,7 @@ class Permission(ORMBase):
         secondary=RolePermissions,
         back_populates='permissions',
     )
+
 
 class Tables:
     def __init__(self):

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, Integer, Boolean, func
+from sqlalchemy import DateTime, ForeignKey, String, Integer, Boolean, JSON, TIMESTAMP, CheckConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.db_clients.config import db_settings
@@ -33,6 +33,10 @@ class Organization(ORMBase):
     connections: Mapped[list["ConnectionSettings"]] = relationship(
         "ConnectionSettings", back_populates="organization"
     )
+    schedule_forecastings: Mapped[list["ScheduleForecasting"]] = relationship(
+        "ScheduleForecasting",
+        back_populates="organization",
+    )
 
 
 class ConnectionSettings(ORMBase):
@@ -52,5 +56,30 @@ class ConnectionSettings(ORMBase):
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     organization: Mapped["Organization"] = relationship("Organization", back_populates="connections")
+
+
+class ScheduleForecasting(ORMBase):
+    __tablename__ = db_settings.tables.SCHEDULE_FORECASTING
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    organization_id: Mapped[int] = mapped_column(ForeignKey("organizations.id"), nullable=False)
+    connection_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    data_name: Mapped[str] = mapped_column(String, nullable=False)
+    source_table: Mapped[str] = mapped_column(String, nullable=False)
+    time_column: Mapped[str] = mapped_column(String, nullable=False)
+    target_column: Mapped[str] = mapped_column(String, nullable=False)
+    discreteness: Mapped[int] = mapped_column(Integer, nullable=False)
+    count_time_points_predict: Mapped[int] = mapped_column(Integer, nullable=False)
+    target_db: Mapped[str] = mapped_column(String, nullable=False, default="self_host")
+    methods_predict: Mapped[dict] = mapped_column(JSON, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP, server_default=func.now(), nullable=False)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    organization: Mapped["Organization"] = relationship("Organization", back_populates="schedule_forecastings")
+
+    __table_args__ = (
+        CheckConstraint("target_db IN ('user','self_host')", name="check_target_db"),
+    )
+
 
 

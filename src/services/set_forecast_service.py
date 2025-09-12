@@ -17,19 +17,6 @@ from src.session import db_manager
 logger = logging.getLogger(__name__)
 
 
-async def check_connection(connection_id: int):
-    async with db_manager.get_db_session() as session:
-        stmt = select(ConnectionSettings.id, ConnectionSettings.organization_id).where(
-            ConnectionSettings.id == connection_id
-        )
-        result = await session.execute(stmt)
-        connection = result.first()
-        if connection:
-            print(f"Connection found: id={connection.id}, organization_id={connection.organization_id}")
-        else:
-            print("Connection not found")
-
-
 def calculate_time_interval(df: pd.DataFrame, time_column: str) -> int:
     """
     Вычисляет средний временной интервал в секундах между записями.
@@ -137,12 +124,14 @@ async def create_forecast_config(payload: ForecastConfigRequest, organization_id
                 raise HTTPException(status_code=404, detail="В таблице нет данных")
 
             methods_predict = [
-                {method: f"{organization_id}_{payload.connection_id}_{method}_target_{payload.target_column}_{payload.source_table}"}
+                {
+                    "method": method,
+                    "target_table": f"_{organization_id}_{payload.connection_id}_{method}_target_{payload.target_column}_{payload.source_table}"
+                }
                 for method in payload.methods
             ]
             df = pd.DataFrame(sample_data)
             discreteness = calculate_time_interval(df=df, time_column=payload.time_column)
-            await check_connection(3)
 
             new_forecast = ScheduleForecasting(
                 organization_id=connection.organization_id,

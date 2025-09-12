@@ -3,6 +3,8 @@ from src.core.token import jwt_token_validator
 from src.schemas import (ForecastConfigRequest, ForecastConfigResponse,
                          ScheduleForecastingResponse, DeleteForecastResponse)
 from src.services.set_forecast_service import create_forecast_config, get_forecast_configs, delete_forecast
+from src.services.get_forecast_service import data_fetcher
+
 from src.core.logger import logger
 
 router = APIRouter()
@@ -16,7 +18,7 @@ async def get_forecast_methods_list(user: dict = Depends(jwt_token_validator)):
     Возвращает список возможных методов прогноза
     """
     permissions = user.get("permissions", [])
-    if "connection.create" not in permissions:
+    if "schedule_forecast.create" not in permissions:
         raise HTTPException(status_code=403, detail="У вас нет доступа для этой операции")
     sample_data = ["XGBoost", "LSTM"]
     return sample_data
@@ -109,7 +111,7 @@ async def func_get_forecast_configs(user: dict = Depends(jwt_token_validator)):
     if not any(role in ["admin", "superuser"] for role in roles):
         raise HTTPException(status_code=403, detail="У вас нет роли для этой операции")
 
-    if "connection.create" not in permissions:
+    if "schedule_forecast.view" not in permissions:
         raise HTTPException(status_code=403, detail="У вас нет доступа для просмотра настроек")
 
     try:
@@ -137,7 +139,7 @@ async def func_delete_forecast(
     if not any(role in ["admin", "superuser"] for role in roles):
         raise HTTPException(status_code=403, detail="У вас нет роли для этой операции")
 
-    if "connection.create" not in permissions:
+    if "schedule_forecast.delete" not in permissions:
         raise HTTPException(status_code=403, detail="У вас нет доступа для этой операции")
 
     try:
@@ -147,3 +149,85 @@ async def func_delete_forecast(
     except Exception as e:
         logger.error(f"Ошибка при удалении настройки прогноза {forecast_id} для организации {organization_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Не удалось удалить настройку прогноза")
+
+
+
+@router.get(
+    "/get_forecast_data",
+)
+async def get_forecast_data(
+        data_name: str,
+        user: dict = Depends(jwt_token_validator)):
+    """
+        Возвращает данные о датчиках в структурированном формате.
+
+        **data_name** можно взять из метода api/v1/schedule_forecast/list
+
+        Формат возвращаемых данных:
+        {
+            "sensor_1": data,
+            "sensor_2": data,
+            ...
+        }
+
+        Где "data" содержит следующие ключи:
+
+        1. **description** (описание датчика):
+            - "sensor_name" (str) — отображаемое имя датчика на фронте.
+            - "sensor_id" (str) — отображаемый ID датчика на фронте.
+
+        2. **map_data** (данные для визуализации):
+            - "data" (dict) — данные для отрисовки графиков:
+                - "last_real_data" — последние известные реальные данные из БД.
+                - "actual_prediction_lstm" — актуальный прогноз модели LSTM.
+                - "actual_prediction_xgboost" — актуальный прогноз модели XGBoost.
+                - "ensemble" — актуальный прогноз модели Ensemble.
+            - "last_know_data" (str) — последняя известная дата в БД реальных данных.
+            - "legend" (dict) — легенда к графику:
+                - "last_know_data_line" (dict) — линия последней известной даты, разделяет график на "Реальные данные" и "Прогноз":
+                    - "text" (dict):
+                        - "en" — английский текст.
+                        - "ru" — русский текст.
+                    - "color" (str) — цвет линии.
+                - "real_data_line" (dict) — линия реальных данных:
+                    - "text" (dict):
+                        - "en" — английский текст.
+                        - "ru" — русский текст.
+                    - "color" (str) — цвет линии.
+                - "LSTM_data_line" (dict) — линия прогноза LSTM:
+                    - "text" (dict):
+                        - "en" — английский текст.
+                        - "ru" — русский текст.
+                    - "color" (str) — цвет линии.
+                - "XGBoost_data_line" (dict) — линия прогноза XGBoost:
+                    - "text" (dict):
+                        - "en" — английский текст.
+                        - "ru" — русский текст.
+                    - "color" (str) — цвет линии.
+                - "Ensemble_data_line" (dict) — линия прогноза Ensemble:
+                    - "text" (dict):
+                        - "en" — английский текст.
+                        - "ru" — русский текст.
+                    - "color" (str) — цвет линии.
+
+        3. **table_to_download** (таблица прогноза) — таблица данных, доступная для скачивания пользователем.
+
+        4. **metrix_tables** (метрики моделей за последние сутки):
+            - "XGBoost" (dict) — метрики для модели XGBoost:
+                - "metrics_table" (dict):
+                    - "text" (dict):
+                        - "en" — английский текст подписи.
+                        - "ru" — русский текст подписи.
+            - "LSTM" (dict) — метрики для модели LSTM:
+                - "metrics_table" (dict):
+                    - "text" (dict):
+                        - "en" — английский текст подписи.
+                        - "ru" — русский текст подписи.
+        """
+    permissions = user.get("permissions", [])
+    if "dashboard.view" not in permissions:
+        raise HTTPException(status_code=403, detail="У вас нет доступа для этой операции")
+
+    data = await data_fetcher(user=user, data_name=data_name)
+
+    return data

@@ -12,3 +12,7 @@ api_router.include_router(db_connections_endpoints, prefix="/db_connection", tag
 
 from src.api.v1.set_forecast_enpoints import router as set_forecast_enpoints
 api_router.include_router(set_forecast_enpoints, prefix="/schedule_forecast", tags=["Schedule Forecast Area"])
+
+
+from src.api.v1.metrics_enpoints import router as metrix_enpoints
+api_router.include_router(metrix_enpoints, prefix="/metrix", tags=["Metrix Area"])

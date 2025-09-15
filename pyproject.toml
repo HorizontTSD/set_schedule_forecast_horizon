@@ -27,6 +27,8 @@ dependencies = [
     "greenlet>=3.2.4",
     "sqlalchemy>=2.0.43",
     "asyncpg>=0.30.0",
+    "cryptography>=45.0.7",
+    "scikit-learn>=1.7.2",
 ]
 requires-python = "==3.12.*"
 readme = "README.md"

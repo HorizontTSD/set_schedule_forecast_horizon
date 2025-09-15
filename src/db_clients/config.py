@@ -53,6 +53,7 @@ class TablesConfig:
         self.PERMISSIONS = "permissions"
         self.ROLE_PERMISSIONS = "role_permissions"
         self.USER_ROLES = "user_roles"
+        self.FORECAST_MODEL = "forecast_models"
 
 
 class RolesConfig:

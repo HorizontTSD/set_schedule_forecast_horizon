@@ -2,7 +2,8 @@ from fastapi import APIRouter, HTTPException, Depends, Body, Path
 from src.core.token import jwt_token_validator
 from src.schemas import (ForecastConfigRequest, ForecastConfigResponse,
                          ScheduleForecastingResponse, DeleteForecastResponse)
-from src.services.set_forecast_service import create_forecast_config, get_forecast_configs, delete_forecast
+from src.services.set_forecast_service import (create_forecast_config, get_forecast_configs,
+                                               delete_forecast, get_forecast_methods)
 from src.services.get_forecast_service import data_fetcher
 
 from src.core.logger import logger
@@ -20,8 +21,8 @@ async def get_forecast_methods_list(user: dict = Depends(jwt_token_validator)):
     permissions = user.get("permissions", [])
     if "schedule_forecast.create" not in permissions:
         raise HTTPException(status_code=403, detail="У вас нет доступа для этой операции")
-    sample_data = ["XGBoost", "LSTM"]
-    return sample_data
+    methods = await get_forecast_methods()
+    return methods
 
 
 @router.post(

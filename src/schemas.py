@@ -183,5 +183,20 @@ class DateRangeResponse(BaseModel):
     end_default_date: datetime
 
 
+class MetricsByMethod(BaseModel):
+    MAE: float
+    RMSE: float
+    R2: float
+    MAPE: float
+
+
+class MetricsResponse(BaseModel):
+    metrics: dict[str, MetricsByMethod]
+
+
 class GenerateDateResponse(RootModel):
     root: Dict[str, DateRangeResponse]
+
+
+class ForecastMethodsResponse(BaseModel):
+    methods: list[str]

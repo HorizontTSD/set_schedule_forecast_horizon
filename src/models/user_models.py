@@ -111,6 +111,18 @@ class Permission(ORMBase):
     )
 
 
+class ForecastModel(ORMBase):
+    __tablename__ = db_settings.tables.FORECAST_MODEL
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    method: Mapped[str] = mapped_column(String, nullable=False)
+    description: Mapped[str] = mapped_column(String, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
+    is_deleted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+
 class Tables:
     def __init__(self):
         self.User = User

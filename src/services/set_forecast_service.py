@@ -7,10 +7,11 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from src.core.security.password import decrypt_password
-from src.models.organization_models import ConnectionSettings
-from src.models.organization_models import ScheduleForecasting
+from src.models.organization_models import ConnectionSettings, ScheduleForecasting
+from src.models.user_models import ForecastModel
+
 from src.schemas import (ForecastConfigResponse, ForecastConfigRequest,
-                         ScheduleForecastingResponse, DeleteForecastResponse)
+                         ScheduleForecastingResponse, DeleteForecastResponse, ForecastMethodsResponse)
 from src.session import db_manager
 
 
@@ -203,3 +204,21 @@ async def delete_forecast(org_id: int, forecast_id: int) -> DeleteForecastRespon
             success=True,
             message=f"Настройка прогноза успешно удалена"
         )
+
+async def get_forecast_methods() -> ForecastMethodsResponse:
+    async with db_manager.get_db_session() as session:
+        stmt = select(ForecastModel.method).where(
+            ForecastModel.is_deleted.is_(False),
+            ForecastModel.is_active.is_(True)
+        )
+        result = await session.execute(stmt)
+        methods: list[str] = [row[0] for row in result.all()]
+
+        if not methods:
+            raise HTTPException(status_code=404, detail="Методы прогнозирования не найдены")
+
+        return ForecastMethodsResponse(methods=methods)
+
+
+
+

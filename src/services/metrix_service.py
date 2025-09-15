@@ -14,7 +14,7 @@ from src.services.get_forecast_service import (
     get_forecast_config_by_name_full,
     dbconnection_by_org_and_connection,
 )
-from src.schemas import MetricsResponse, GenerateDateResponse
+from src.schemas import MetricsResponse, GenerateDateResponse, MetricsByMethod
 
 
 async def get_min_max_dates(
@@ -143,13 +143,12 @@ async def fetch_data_in_range(
         return df
 
 
-async def calculate_metrics(df_merged, target_column, exist_methods):
+async def calculate_metrics(df_merged, target_column, exist_methods) -> MetricsResponse:
     y_true = df_merged[target_column]
-
     results = {}
 
     def _safe_metric(value):
-        return 0 if value is None or (isinstance(value, float) and np.isnan(value)) else value
+        return 0.0 if value is None or (isinstance(value, float) and np.isnan(value)) else float(value)
 
     for method in exist_methods:
         y_pred = df_merged[method]
@@ -158,21 +157,21 @@ async def calculate_metrics(df_merged, target_column, exist_methods):
         mse = _safe_metric(await asyncio.to_thread(mean_squared_error, y_true, y_pred))
         rmse = _safe_metric(np.sqrt(mse))
         r2 = _safe_metric(await asyncio.to_thread(r2_score, y_true, y_pred))
-        mape = _safe_metric(await asyncio.to_thread(np.mean, np.abs((y_true - y_pred) / y_true)) * 100)
-
-        results[method] = {
-            "MAE": round(mae, 2),
-            "RMSE": round(rmse, 2),
-            "R2": round(r2, 2),
-            "MAPE": float(round(mape, 2)),
-        }
+        epsilon = 1e-5
+        mape = _safe_metric(await asyncio.to_thread(
+            lambda yt, yp: np.mean(np.abs((yt - yp) / (yt + epsilon))) * 100, y_true, y_pred
+        ))
+        round_to = 2
+        results[method] = MetricsByMethod(
+            MAE=round(mae, round_to),
+            RMSE=round(rmse, round_to),
+            R2=round(r2, round_to),
+            MAPE=round(mape, round_to)
+        )
 
     return results
 
-
 async def fetch_metrics_by_date(user, data_name, start_date, end_date) -> MetricsResponse:
-    response = []
-
     try:
         organization_id = user.get("organization_id")
         if not organization_id:
@@ -227,12 +226,10 @@ async def fetch_metrics_by_date(user, data_name, start_date, end_date) -> Metric
         target_db_manager = source_db_manager if target_db == "self_host" else db_manager
 
         tolerance = pd.Timedelta(seconds=300)
-        all_methods = []
 
         for method_predict in methods_predict:
             target_table = method_predict.get("target_table")
             method = method_predict.get("method")
-            all_methods.append(method)
             df = await fetch_data_in_range(
                 table_name=target_table,
                 db_manager=target_db_manager,
@@ -255,12 +252,11 @@ async def fetch_metrics_by_date(user, data_name, start_date, end_date) -> Metric
 
         exist_methods = [col for col in df_merged.columns if col not in [time_column, target_column]]
         df_merged = df_merged.dropna()
-        data = await calculate_metrics(df_merged, target_column, exist_methods)
-        response.append(data)
+        metrics_dict = await calculate_metrics(df_merged, target_column, exist_methods)
+        return MetricsResponse(metrics=metrics_dict)
+
 
     except HTTPException:
         raise
     except Exception:
         raise HTTPException(status_code=500, detail="Ошибка при обработке данных")
-
-    return response

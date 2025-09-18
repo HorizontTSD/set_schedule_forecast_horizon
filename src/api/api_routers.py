@@ -15,4 +15,4 @@ api_router.include_router(set_forecast_enpoints, prefix="/schedule_forecast", ta
 
 
 from src.api.v1.metrics_enpoints import router as metrix_enpoints
-api_router.include_router(metrix_enpoints, prefix="/metrix", tags=["Metrix Area"])
+api_router.include_router(metrix_enpoints, prefix="/metrics", tags=["Metrix Area"])

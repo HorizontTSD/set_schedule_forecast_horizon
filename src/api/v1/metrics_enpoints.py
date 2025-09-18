@@ -9,7 +9,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/get_possible_date_for_metrix",
+    "/get_possible_date_for_metrics",
 )
 async def get_forecast_data(
         data_name: str,
@@ -40,12 +40,12 @@ async def get_metrics_by_date(
     Возвращает метрики прогноза по датам
 
     **data_name** можно получить из api/v1/schedule_forecast/list
-    **start_date** можно получить из api/v1/metrix/get_possible_date_for_metrix?data_name=
-    **end_date** можно получить из api/v1/metrix/get_possible_date_for_metrix?data_name=
+    **start_date** можно получить из api/v1/metrix/get_possible_date_for_metrics?data_name=
+    **end_date** можно получить из api/v1/metrix/get_possible_date_for_metrics?data_name=
 
     Пример запроса:
 
-        GET /set_schedule_forecast/api/v1/schedule_forecast/get_metrix_by_date?data_name=example_data_name&start_date=2025-09-01&end_date=2025-09-12
+        GET /set_schedule_forecast/api/v1/schedule_forecast/get_metrics_by_date?data_name=example_data_name&start_date=2025-09-01&end_date=2025-09-12
     """
     permissions = user.get("permissions", [])
     if "metrics.view" not in permissions:

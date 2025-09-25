@@ -33,7 +33,7 @@ async def get_forecast_methods_list(user: dict = Depends(jwt_token_validator)):
     summary="Получение примера и дискретности временного ряда"
 )
 async def func_fetch_sample_and_discreteness(
-        connection_id: int = Query(..., example=3),
+        connection_id: int = Query(..., example=4),
         source_table: str = Query(..., example="electrical_consumption_amurskaya_obl"),
         time_column: str = Query(..., example="datetime"),
         target_column: str = Query(..., example="vc_fact"),
@@ -51,7 +51,6 @@ async def func_fetch_sample_and_discreteness(
 
     payload = FetchSampleDataRequest(
         connection_id=connection_id,
-        data_name=data_name,
         source_table=source_table,
         time_column=time_column,
         target_column=target_column,

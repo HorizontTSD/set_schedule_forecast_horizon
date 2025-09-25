@@ -34,7 +34,6 @@ async def get_forecast_methods_list(user: dict = Depends(jwt_token_validator)):
 )
 async def func_fetch_sample_and_discreteness(
         connection_id: int = Query(..., example=3),
-        data_name: str = Query(..., example="Тестовое"),
         source_table: str = Query(..., example="electrical_consumption_amurskaya_obl"),
         time_column: str = Query(..., example="datetime"),
         target_column: str = Query(..., example="vc_fact"),

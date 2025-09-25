@@ -11,7 +11,8 @@ from src.models.organization_models import ConnectionSettings, ScheduleForecasti
 from src.models.user_models import ForecastModel
 
 from src.schemas import (ForecastConfigResponse, ForecastConfigRequest,
-                         ScheduleForecastingResponse, DeleteForecastResponse, ForecastMethodsResponse)
+                         ScheduleForecastingResponse, DeleteForecastResponse, ForecastMethodsResponse,
+                         FetchSampleDataRequest, FetchSampleResponse)
 from src.session import db_manager
 
 
@@ -72,6 +73,90 @@ async def fetch_postgres_sample_data(
     return sample_data
 
 
+async def fetch_postgres_table_count(
+        username: str,
+        password: str,
+        host: str,
+        port: int,
+        db_name: str,
+        table_name: str
+) -> int:
+    db_url = f"postgresql+asyncpg://{username}:{password}@{host}:{port}/{db_name}"
+    engine = create_async_engine(db_url)
+
+    try:
+        async with engine.connect() as conn:
+            query = text(f'SELECT COUNT(*) AS cnt FROM "{table_name}"')
+            result = await conn.execute(query)
+            row = result.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Не удалось получить количество записей")
+            return row[0]
+    except Exception as e:
+        logger.error(f"Ошибка при подсчёте записей в PostgreSQL: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Не удалось получить количество записей в таблице")
+    finally:
+        await engine.dispose()
+
+
+async def get_seconds(horizon_count: int, time_interval: str) -> int:
+    mapping = {
+        "minute": 60,
+        "hour": 3600,
+        "day": 86400,
+        "month": 2592000
+    }
+    if time_interval not in mapping:
+        raise ValueError(f"Некорректный интервал времени: {time_interval}")
+    return horizon_count * mapping[time_interval]
+
+
+async def fetch_sample_data_and_discreteness(payload: FetchSampleDataRequest, organization_id: int) -> FetchSampleResponse:
+
+    async with db_manager.get_db_session() as session:
+        stmt = select(ConnectionSettings).where(
+            ConnectionSettings.id == payload.connection_id,
+            ConnectionSettings.organization_id == organization_id,
+            ConnectionSettings.is_deleted.is_not(True)
+        )
+        result = await session.execute(stmt)
+        connection = result.scalar_one_or_none()
+
+        if not connection:
+            raise HTTPException(status_code=404, detail="Соединение не найдено или не принадлежит организации")
+
+        if connection.connection_schema.lower() != "postgresql":
+            raise HTTPException(status_code=400, detail=f"Схема {connection.connection_schema} пока не поддерживается")
+
+        try:
+            password = decrypt_password(connection.db_password)
+            sample_data = await fetch_postgres_sample_data(
+                username=connection.db_user,
+                password=password,
+                host=connection.host,
+                port=connection.port,
+                db_name=connection.db_name,
+                table_name=payload.source_table,
+                time_column=payload.time_column,
+                target_column=payload.target_column
+            )
+
+            if not sample_data:
+                raise HTTPException(status_code=404, detail="В таблице нет данных ")
+
+            df = pd.DataFrame(sample_data)
+            discreteness = calculate_time_interval(df=df, time_column=payload.time_column)
+
+        except Exception as e:
+            logger.error(f"Ошибка при получении данных: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Не удалось получить данные")
+
+        return FetchSampleResponse(
+            sample_data=sample_data,
+            discreteness=discreteness
+        )
+
+
 async def create_forecast_config(payload: ForecastConfigRequest, organization_id: int) -> ForecastConfigResponse:
     async with db_manager.get_db_session() as session:
         stmt = select(ConnectionSettings).where(
@@ -111,18 +196,18 @@ async def create_forecast_config(payload: ForecastConfigRequest, organization_id
 
         try:
             password = decrypt_password(connection.db_password)
-            sample_data = await fetch_postgres_sample_data(
-                username=connection.db_user,
-                password=password,
-                host=connection.host,
-                port=connection.port,
-                db_name=connection.db_name,
-                table_name=payload.source_table,
-                time_column=payload.time_column,
-                target_column=payload.target_column
+
+            count_data = await fetch_postgres_table_count(
+                    username=connection.db_user,
+                    password=password,
+                    host=connection.host,
+                    port=connection.port,
+                    db_name=connection.db_name,
+                    table_name=payload.source_table,
             )
-            if not sample_data:
-                raise HTTPException(status_code=404, detail="В таблице нет данных")
+
+            if count_data < 10:
+                raise HTTPException(status_code=404, detail="В таблице недостаточно или нет данных ")
 
             methods_predict = [
                 {
@@ -131,8 +216,18 @@ async def create_forecast_config(payload: ForecastConfigRequest, organization_id
                 }
                 for method in payload.methods
             ]
-            df = pd.DataFrame(sample_data)
-            discreteness = calculate_time_interval(df=df, time_column=payload.time_column)
+            discreteness = payload.discreteness
+
+            seconds = await get_seconds(
+                horizon_count=payload.horizon_count, time_interval=payload.time_interval)
+
+            count_time_points_predict = int(seconds/discreteness)
+
+            if count_time_points_predict < 5: # минимальная длина предсказания в точках
+                count_time_points_predict = 5
+
+            if count_time_points_predict > 5000: # максимальная длина предсказания в точках
+                count_time_points_predict = min(5000, int(count_data * 0.2))
 
             new_forecast = ScheduleForecasting(
                 organization_id=connection.organization_id,
@@ -142,7 +237,7 @@ async def create_forecast_config(payload: ForecastConfigRequest, organization_id
                 time_column=payload.time_column,
                 target_column=payload.target_column,
                 discreteness=discreteness,
-                count_time_points_predict=payload.count_time_points_predict,
+                count_time_points_predict=count_time_points_predict,
                 target_db=payload.target_db,
                 methods_predict=methods_predict,
                 is_deleted=False
@@ -156,9 +251,9 @@ async def create_forecast_config(payload: ForecastConfigRequest, organization_id
 
         return ForecastConfigResponse(
             success=True,
-            message="Настройка успешно создана",
-            sample_data=sample_data
+            message="Настройка успешно создана"
         )
+
 
 
 async def get_forecast_configs(organization_id: int) -> ForecastConfigResponse:

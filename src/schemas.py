@@ -56,15 +56,29 @@ class ForecastConfigRequest(BaseModel):
     source_table: str
     time_column: str
     target_column: str
-    count_time_points_predict: int
+    horizon_count: int
+    time_interval: str
+    discreteness: int
     target_db: str
     methods: list[str]
+
+
+class FetchSampleDataRequest(BaseModel):
+    connection_id: int
+    data_name: str
+    source_table: str
+    time_column: str
+    target_column: str
 
 
 class ForecastConfigResponse(BaseModel):
     success: bool
     message: str
-    sample_data: list[Any]
+
+
+class FetchSampleResponse(BaseModel):
+    sample_data: List[Dict]
+    discreteness: int
 
 
 class ScheduleForecastingResponse(BaseModel):

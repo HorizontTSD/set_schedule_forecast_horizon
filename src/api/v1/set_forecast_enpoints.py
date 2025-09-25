@@ -1,9 +1,11 @@
-from fastapi import APIRouter, HTTPException, Depends, Body, Path
+from fastapi import APIRouter, HTTPException, Depends, Body, Path, Query
+
 from src.core.token import jwt_token_validator
 from src.schemas import (ForecastConfigRequest, ForecastConfigResponse,
-                         ScheduleForecastingResponse, DeleteForecastResponse)
+                         ScheduleForecastingResponse, DeleteForecastResponse,
+                         FetchSampleResponse, FetchSampleDataRequest)
 from src.services.set_forecast_service import (create_forecast_config, get_forecast_configs,
-                                               delete_forecast, get_forecast_methods)
+                                               delete_forecast, get_forecast_methods, fetch_sample_data_and_discreteness)
 from src.services.get_forecast_service import data_fetcher
 
 from src.core.logger import logger
@@ -25,6 +27,51 @@ async def get_forecast_methods_list(user: dict = Depends(jwt_token_validator)):
     return methods
 
 
+@router.get(
+    "/fetch_sample_and_discreteness",
+    response_model=FetchSampleResponse,
+    summary="Получение примера и дискретности временного ряда"
+)
+async def func_fetch_sample_and_discreteness(
+        connection_id: int = Query(..., example=3),
+        data_name: str = Query(..., example="Тестовое"),
+        source_table: str = Query(..., example="electrical_consumption_amurskaya_obl"),
+        time_column: str = Query(..., example="datetime"),
+        target_column: str = Query(..., example="vc_fact"),
+        user: dict = Depends(jwt_token_validator)
+):
+    permissions = user.get("permissions", [])
+    roles = user.get("roles", [])
+    organization_id = user.get("organization_id", None)
+
+    if not any(role in ["admin", "superuser"] for role in roles):
+        raise HTTPException(status_code=403, detail="У вас нет роли для этой операции")
+
+    if "connection.create" not in permissions:
+        raise HTTPException(status_code=403, detail="У вас нет доступа для этой операции")
+
+    payload = FetchSampleDataRequest(
+        connection_id=connection_id,
+        data_name=data_name,
+        source_table=source_table,
+        time_column=time_column,
+        target_column=target_column,
+    )
+
+    try:
+        return await fetch_sample_data_and_discreteness(
+            payload=payload,
+            organization_id=organization_id
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Ошибка при получении тестовых данных: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Ошибка при получении тестовых данных")
+
+
+
+
 @router.post(
     "/create",
     response_model=ForecastConfigResponse,
@@ -39,7 +86,9 @@ async def func_create_forecast_config(
                 "source_table": "electrical_consumption_amurskaya_obl",
                 "time_column": "datetime",
                 "target_column": "vc_fact",
-                "count_time_points_predict": 10,
+                "horizon_count": 36,
+                "time_interval": "hour",
+                "discreteness": 600,
                 "target_db": "self_host",
                 "methods": [
                     "XGBoost",
@@ -81,7 +130,6 @@ async def func_create_forecast_config(
     except Exception as e:
         logger.error(f"Ошибка при создании настройки прогнозирования: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Не удалось создать настройку прогнозирования")
-
 
 
 @router.get(

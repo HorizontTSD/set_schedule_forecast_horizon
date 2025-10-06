@@ -40,9 +40,14 @@ def postgres_check_connection(credentials_data: Dict) -> Tuple[bool, str]:
 
 class DBManager:
     def __init__(self, db_url: str):
-        self.engine = create_async_engine(db_url)
+        self.engine = create_async_engine(
+            db_url,
+            pool_pre_ping=True,             # проверяет соединение перед использованием
+            pool_recycle=1800,              # обновляет соединение каждые 30 мин
+            connect_args={"timeout": 160},
+        )
         self.session_factory = async_sessionmaker(self.engine, expire_on_commit=False)
-        
+
     @asynccontextmanager
     async def get_db_session(self):
         async with self.session_factory() as session:
@@ -54,6 +59,6 @@ class DBManager:
                 raise
             finally:
                 await session.close()
-        
+
 
 db_manager = DBManager(db_settings.db.get_async_url())

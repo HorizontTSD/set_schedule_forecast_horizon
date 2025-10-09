@@ -145,8 +145,12 @@ async def fetch_postgres_tables(username: str, password: str, host: str, port: i
     db_url = f"postgresql+asyncpg://{username}:{password}@{host}:{port}/{db_name}"
     engine = create_async_engine(db_url)
 
+    drop_pattern = ["XGBoost", "LSTM", "xLSTM", "CatBoost", "ARIMA", "SARIMA" ,"H2O", "Prophet"]
+
     async with engine.connect() as conn:
         tables = await conn.run_sync(lambda sync_conn: inspect(sync_conn.engine).get_table_names())
+
+    tables = [t for t in tables if not any(p.lower() in t.lower() for p in drop_pattern)]
 
     return TablesListResponse(tables=tables)
 

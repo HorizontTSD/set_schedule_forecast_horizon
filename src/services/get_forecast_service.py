@@ -125,7 +125,7 @@ def method_metrix_table(df_real_data_to_comparison, df_previous_prediction_to_co
     return data
 
 
-def generane_responce(data_name, description, data, last_know_data, metrics_table_XGBoost, metrics_table_LSTM, table_to_download):
+def generane_responce(data_name,  description, data, last_know_data, metrics_table_XGBoost, metrics_table_LSTM, table_to_download):
     response = []
     sensor = {}
     sensor[data_name] = {}
@@ -268,12 +268,14 @@ async def data_fetcher(data_name, user) -> GenerateResponse:
         if not data:
             raise HTTPException(status_code=404, detail="Данные не найдены")
 
-        description = {"sensor_name": data_name, "data_name": None}
         time_column = data.get("time_column")
         target_column = data.get("target_column")
         target_db = data.get("target_db")
         source_table = data.get("source_table")
         methods_predict = data.get("methods_predict", [])
+
+        description = {"sensor_name": data_name, "data_name": None, "time_column": time_column, "target_column": target_column}
+
 
         connection_id = data.get("connection_id")
         data_connection = await dbconnection_by_org_and_connection(
@@ -345,7 +347,6 @@ async def data_fetcher(data_name, user) -> GenerateResponse:
             if method == "XGBoost" and predict_data:
                 data_result["actual_prediction_xgboost"] = predict_data
                 df_table_to_download = df_predict_data.copy()
-                print(df_table_to_download)
                 metrics_table_XGBoost = method_metrix_table(
                     df_real_data_to_comparison=df_last_real_data,
                     df_previous_prediction_to_comparison=df_last_predict_data,

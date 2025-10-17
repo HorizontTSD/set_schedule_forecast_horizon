@@ -60,9 +60,9 @@ def metrix_all(col_time, col_target, df_evaluetion, df_comparative):
         suffixes=('_pred', '_true')
     )
 
-    df_merged['MAE'] = np.abs(df_merged['vc_fact_true'] - df_merged['vc_fact_pred'])
-    df_merged['RMSE'] = np.sqrt((df_merged['vc_fact_true'] - df_merged['vc_fact_pred'])**2)
-    df_merged['MAPE'] = np.abs((df_merged['vc_fact_true'] - df_merged['vc_fact_pred']) / df_merged['vc_fact_true']) * 100
+    df_merged['MAE'] = np.abs(df_merged[f'{col_target}_true'] - df_merged[f'{col_target}_pred'])
+    df_merged['RMSE'] = np.sqrt((df_merged[f'{col_target}_true'] - df_merged[f'{col_target}_pred'])**2)
+    df_merged['MAPE'] = np.abs((df_merged[f'{col_target}_true'] - df_merged[f'{col_target}_pred']) / df_merged[f'{col_target}_true']) * 100
 
     df_merged = df_merged.rename(columns={f"{col_target}_true": col_target})
 

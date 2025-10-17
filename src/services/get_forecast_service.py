@@ -330,6 +330,9 @@ async def data_fetcher(data_name, user) -> GenerateResponse:
                 first_real_date=first_real_date
             )
 
+            print(f"method_predict = {method_predict}")
+            print(df_predict_data)
+
             if df_predict_data.empty:
                 continue
 
@@ -344,6 +347,7 @@ async def data_fetcher(data_name, user) -> GenerateResponse:
             if method == "XGBoost" and predict_data:
                 data_result["actual_prediction_xgboost"] = predict_data
                 df_table_to_download = df_predict_data.copy()
+                print(df_table_to_download)
                 metrics_table_XGBoost = method_metrix_table(
                     df_real_data_to_comparison=df_last_real_data,
                     df_previous_prediction_to_comparison=df_last_predict_data,
@@ -352,9 +356,11 @@ async def data_fetcher(data_name, user) -> GenerateResponse:
                     type="XGBoost"
                 )
 
+
             elif method == "LSTM" and predict_data:
                 data_result["actual_prediction_lstm"] = predict_data
                 df_table_to_download["LSTM"] = df_real_predict_data[target_column]
+
                 metrics_table_LSTM = method_metrix_table(
                     df_real_data_to_comparison=df_last_real_data,
                     df_previous_prediction_to_comparison=df_last_predict_data,
@@ -378,5 +384,6 @@ async def data_fetcher(data_name, user) -> GenerateResponse:
 
     except HTTPException:
         raise
-    except Exception:
+    except Exception as e:
+        logging.error(e)
         raise HTTPException(status_code=500, detail="Ошибка при обработке данных")

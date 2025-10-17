@@ -17,7 +17,7 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 
-LIMIT = 300 # Лимит на выгрузку строк
+LIMIT = 10000 # Лимит на выгрузку строк
 
 async def get_forecast_config_by_name_full(data_name: str, organization_id: int):
     async with db_manager.get_db_session() as session:
@@ -327,11 +327,9 @@ async def data_fetcher(data_name, user) -> GenerateResponse:
                 time_column=time_column,
                 target_column=target_column,
                 limit=LIMIT,
-                first_real_date=first_real_date
+                first_real_date=last_real_date
             )
 
-            print(f"method_predict = {method_predict}")
-            print(df_predict_data)
 
             if df_predict_data.empty:
                 continue

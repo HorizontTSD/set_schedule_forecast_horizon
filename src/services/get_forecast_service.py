@@ -169,14 +169,14 @@ def generane_responce(data_name,  description, data, last_know_data, metrics_tab
             },
             "XGBoost_data_line": {
                 "text": {
-                    "en": "XGBoost current forecast",
-                    "ru": "XGBoost актуальный прогноз",
+                    "en": "Forecast",
+                    "ru": "Прогноз",
                     "zh": "XGBoost 当前预测",
                     "it": "Previsione attuale XGBoost",
                     "fr": "Prévision actuelle XGBoost",
                     "de": "Aktuelle XGBoost-Vorhersage"
                 },
-                "color": "#a7f3d0"
+                "color": "#FFA500"
             },
             "Ensemble_data_line": {
                 "text": {
